@@ -1,0 +1,13 @@
+# Ignore datasets and outputs
+data/*
+!data/README.md
+
+# Ignore temporary files
+*.log
+*.csv
+*.tsv
+*.sqlite
+
+# Ignore virtual environments
+venv/
+__pycache__/
