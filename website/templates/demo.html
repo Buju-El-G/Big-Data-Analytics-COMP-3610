@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced PDF Summarizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f7f9fc;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .file-label:hover {
+            background-color: #2980b9;
+        }
+        .file-info {
+            margin-top: 15px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .summary-options {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .summary-options label {
+            margin-right: 10px;
+        }
+        .summary-options input {
+            width: 60px;
+            padding: 5px;
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .process-btn {
+            padding: 12px 28px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .tfidf-btn {
+            background-color: #2ecc71;
+        }
+        .tfidf-btn:hover {
+            background-color: #27ae60;
+        }
+        .hybrid-btn {
+            background-color: #9b59b6;
+        }
+        .hybrid-btn:hover {
+            background-color: #8e44ad;
+        }
+        .process-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .results-section {
+            display: none;
+            margin-top: 30px;
+        }
+        .results-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .result-box {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            height: 500px;
+            overflow-y: auto;
+        }
+        .result-box h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        .highlight {
+            background-color: #ffeb3b !important;
+            padding: 2px 0;
+        }
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .loader-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .sentence {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            padding: 3px;
+        }
+        .summary-sentence {
+            background-color: #e8f4fd;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .sentence-score {
+            font-size: 12px;
+            color: #7f8c8d;
+            display: block;
+            margin-top: 4px;
+        }
+        .count-info {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin: 10px 0;
+        }
+        .coherent-summary {
+            line-height: 1.8;
+            font-size: 16px;
+            text-align: justify;
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #ecf0f1;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .abstractive-summary {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            line-height: 1.8;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .method-badge {
+            display: inline-block;
+            margin-right: 10px;
+            background-color: #3498db;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Enhanced PDF Summarizer</h1>
+
+        <div class="upload-section">
+            <input type="file" id="pdfFile" class="file-input" accept=".pdf">
+            <label for="pdfFile" class="file-label">Select PDF</label>
+            <div id="fileInfo" class="file-info">No file selected</div>
+
+            <div class="summary-options">
+                <label for="sentenceCount">Number of top sentences:</label>
+                <input type="number" id="sentenceCount" min="1" max="100" value="25">
+            </div>
+
+            <div class="button-group">
+                <button id="tfidfBtn" class="process-btn tfidf-btn" disabled>TF-IDF Summary</button>
+                <button id="hybridBtn" class="process-btn hybrid-btn" disabled>Hybrid TF-IDF + LED Summary</button>
+            </div>
+        </div>
+
+        <div id="loader" class="loader">
+            <div class="loader-spinner"></div>
+            <p id="loaderText">Processing PDF and generating summary...</p>
+        </div>
+
+        <div id="results" class="results-section">
+            <div class="tabs">
+                <button class="tab active" data-tab="tfidf">TF-IDF Summary</button>
+                <button class="tab" data-tab="hybrid">Hybrid TF-IDF + LED Summary</button>
+            </div>
+
+            <div id="tfidfTab" class="tab-content active">
+                <div class="results-container">
+                    <div class="result-box">
+                        <h2>TF-IDF Summary</h2>
+                        <div id="countInfo" class="count-info"></div>
+                        <div id="summary" class="summary-text"></div>
+                    </div>
+                    <div class="result-box">
+                        <h2>Original Text</h2>
+                        <div id="originalText"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="hybridTab" class="tab-content">
+                <div class="results-container">
+                    <div class="result-box">
+                        <h2>Hybrid Summary</h2>
+                        <div id="hybridCountInfo" class="count-info"></div>
+
+                        <div class="abstractive-summary">
+                            <span class="method-badge">LED Abstractive</span>
+                            <div id="ledSummary"></div>
+                        </div>
+
+                        <h3>TF-IDF Extractive Sentences</h3>
+                        <div id="hybridSummary" class="summary-text"></div>
+                    </div>
+                    <div class="result-box">
+                        <h2>Original Text with Highlights</h2>
+                        <div id="hybridOriginalText"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set worker path to pdf.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // Elements
+        const pdfFileInput = document.getElementById('pdfFile');
+        const fileInfoElement = document.getElementById('fileInfo');
+        const tfidfBtn = document.getElementById('tfidfBtn');
+        const hybridBtn = document.getElementById('hybridBtn');
+        const loaderElement = document.getElementById('loader');
+        const loaderTextElement = document.getElementById('loaderText');
+        const resultsElement = document.getElementById('results');
+        const summaryElement = document.getElementById('summary');
+        const originalTextElement = document.getElementById('originalText');
+        const sentenceCountInput = document.getElementById('sentenceCount');
+        const countInfoElement = document.getElementById('countInfo');
+        const hybridSummaryElement = document.getElementById('hybridSummary');
+        const hybridOriginalTextElement = document.getElementById('hybridOriginalText');
+        const ledSummaryElement = document.getElementById('ledSummary');
+        const hybridCountInfoElement = document.getElementById('hybridCountInfo');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Selected file
+        let selectedFile = null;
+        let extractedText = '';
+
+        // Event listeners
+        pdfFileInput.addEventListener('change', handleFileSelect);
+        tfidfBtn.addEventListener('click', () => processPDF('tfidf'));
+        hybridBtn.addEventListener('click', () => processPDF('hybrid'));
+
+        // Tab functionality
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+
+                // Remove active class from all tabs and contents
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+
+                // Add active class to selected tab and content
+                tab.classList.add('active');
+                document.getElementById(`${tabId}Tab`).classList.add('active');
+            });
+        });
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+
+            if (selectedFile) {
+                fileInfoElement.textContent = `Selected: ${selectedFile.name}`;
+                tfidfBtn.disabled = false;
+                hybridBtn.disabled = false;
+            } else {
+                fileInfoElement.textContent = 'No file selected';
+                tfidfBtn.disabled = true;
+                hybridBtn.disabled = true;
+            }
+        }
+
+        async function processPDF(mode) {
+            if (!selectedFile) return;
+
+            // Show loader and hide results
+            loaderElement.style.display = 'block';
+            loaderTextElement.textContent = `Processing PDF and generating ${mode === 'hybrid' ? 'hybrid' : 'TF-IDF'} summary...`;
+            resultsElement.style.display = 'none';
+
+            try {
+                // Read the PDF file if not already extracted
+                if (!extractedText) {
+                    extractedText = await extractTextFromPDF(selectedFile);
+                }
+
+                const sentenceCount = parseInt(sentenceCountInput.value);
+
+                if (mode === 'tfidf') {
+                    // Process the text and generate TF-IDF summary
+                    const { summary, sentences, scores, originalIndices } = generateTFIDFSummary(extractedText, sentenceCount);
+
+                    // Display TF-IDF results
+                    displayTFIDFResults(summary, extractedText, sentences, scores, originalIndices);
+
+                    // Show TF-IDF tab
+                    tabs[0].click();
+                } else if (mode === 'hybrid') {
+                    // First generate TF-IDF summary
+                    const { summary, sentences, scores, originalIndices } = generateTFIDFSummary(extractedText, sentenceCount);
+
+                    // Then generate LED summary (simulate)
+                    const ledSummary = await generateLEDSummary(summary);
+
+                    // Display hybrid results
+                    displayHybridResults(summary, extractedText, sentences, scores, originalIndices, ledSummary);
+
+                    // Show hybrid tab
+                    tabs[1].click();
+                }
+
+                // Hide loader and show results
+                loaderElement.style.display = 'none';
+                resultsElement.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                alert('Error processing PDF: ' + error.message);
+                loaderElement.style.display = 'none';
+            }
+        }
+
+        async function extractTextFromPDF(file) {
+            return new Promise((resolve, reject) => {
+                const fileReader = new FileReader();
+
+                fileReader.onload = async function(event) {
+                    try {
+                        const typedArray = new Uint8Array(event.target.result);
+                        const loadingTask = pdfjsLib.getDocument({ data: typedArray });
+
+                        const pdf = await loadingTask.promise;
+                        let fullText = '';
+
+                        // Extract text from each page
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ');
+                            fullText += pageText + ' ';
+                        }
+
+                        resolve(fullText);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                fileReader.onerror = function() {
+                    reject(new Error('Error reading file'));
+                };
+
+                fileReader.readAsArrayBuffer(file);
+            });
+        }
+
+        function generateTFIDFSummary(text, topN = 25) {
+            // Custom function to split text into sentences
+            function splitIntoSentences(text) {
+                // Split on period, question mark, or exclamation point followed by space or newline
+                const sentenceRegex = /[.!?]+[\s\n]+/;
+                const sentences = text.split(sentenceRegex);
+
+                // Filter out empty sentences and trim whitespace
+                return sentences
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+            }
+
+            // Custom function to tokenize text into words
+            function tokenize(text) {
+                // Convert to lowercase and split on non-alphanumeric characters
+                return text.toLowerCase()
+                    .replace(/[^\w\s]/g, ' ')
+                    .split(/\s+/)
+                    .filter(word => word.length > 0);
+            }
+
+            // Custom TF-IDF implementation
+            function calculateTFIDF(documents) {
+                // Calculate term frequency for each document
+                const tf = documents.map(tokens => {
+                    const termFreq = {};
+                    tokens.forEach(term => {
+                        termFreq[term] = (termFreq[term] || 0) + 1;
+                    });
+                    return termFreq;
+                });
+
+                // Calculate inverse document frequency
+                const docCount = documents.length;
+                const termDocumentCount = {};
+
+                documents.forEach(tokens => {
+                    // Count unique terms in this document
+                    const uniqueTerms = [...new Set(tokens)];
+                    uniqueTerms.forEach(term => {
+                        termDocumentCount[term] = (termDocumentCount[term] || 0) + 1;
+                    });
+                });
+
+                // Calculate IDF for each term
+                const idf = {};
+                Object.keys(termDocumentCount).forEach(term => {
+                    idf[term] = Math.log(docCount / (termDocumentCount[term] || 1));
+                });
+
+                // Calculate TF-IDF scores for each term in each document
+                const tfidf = tf.map((docTerms, docIndex) => {
+                    const docScores = {};
+                    Object.keys(docTerms).forEach(term => {
+                        docScores[term] = docTerms[term] * (idf[term] || 0);
+                    });
+                    return docScores;
+                });
+
+                return tfidf;
+            }
+
+            // Step 1: Split text into sentences
+            const sentences = splitIntoSentences(text);
+
+            // Make sure we don't try to get more sentences than exist
+            topN = Math.min(topN, sentences.length);
+
+            // Step 2: Tokenize each sentence
+            const tokenizedSentences = sentences.map(tokenize);
+
+            // Step 3: Calculate TF-IDF
+            const tfidfScores = calculateTFIDF(tokenizedSentences);
+
+            // Step 4: Calculate sentence scores
+            const sentenceScores = [];
+
+            for (let i = 0; i < sentences.length; i++) {
+                let score = 0;
+                const termScores = tfidfScores[i];
+
+                // Sum up TF-IDF scores for all terms in the sentence
+                Object.values(termScores).forEach(termScore => {
+                    score += termScore;
+                });
+
+                // Normalize by sentence length to avoid bias towards longer sentences
+                const tokenCount = tokenizedSentences[i].length || 1;
+                score = score / tokenCount;
+
+                sentenceScores.push({
+                    index: i,
+                    score: score,
+                    text: sentences[i],
+                    originalIndex: i
+                });
+            }
+
+            // Step 5: Sort sentences by score in descending order
+            sentenceScores.sort((a, b) => b.score - a.score);
+
+            // Step 6: Get top N sentences
+            const topSentences = sentenceScores.slice(0, topN);
+
+            // Step 7: Sort by original order for coherent flow
+            topSentences.sort((a, b) => a.originalIndex - b.originalIndex);
+
+            // Create summary text
+            const summary = topSentences.map(s => s.text).join('. ') + '.';
+
+            return {
+                summary,
+                sentences: topSentences.map(s => s.text),
+                scores: topSentences.map(s => s.score),
+                originalIndices: topSentences.map(s => s.originalIndex)
+            };
+        }
+
+        async function generateLEDSummary(extractiveText) {
+            try {
+                loaderTextElement.textContent = "Generating abstractive summary with LED model...";
+            
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: extractiveText
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.summary;
+        
+            } catch (error) {
+                console.error('LED Summarization Error:', error);
+                return `Abstractive summarization failed: ${error.message}`;
+            }
+        }
+
+
+        function displayTFIDFResults(summary, originalText, summaryArray, scores, originalIndices) {
+            // Custom function to split text into sentences
+            function splitIntoSentences(text) {
+                // Split on period, question mark, or exclamation point followed by space or newline
+                const sentenceRegex = /[.!?]+[\s\n]+/;
+                const sentences = text.split(sentenceRegex);
+
+                // Filter out empty sentences and trim whitespace
+                return sentences
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+            }
+
+            // Display original text with sentences separated
+            const allSentences = splitIntoSentences(originalText);
+
+            originalTextElement.innerHTML = '';
+            allSentences.forEach((sentence, index) => {
+                const sentenceElement = document.createElement('div');
+                sentenceElement.className = 'sentence';
+
+                // Highlight sentences that are in the summary
+                const isInSummary = originalIndices.includes(index);
+                if (isInSummary) {
+                    sentenceElement.className = 'sentence highlight';
+                    sentenceElement.style.backgroundColor = '#ffeb3b';
+                }
+
+                sentenceElement.textContent = sentence;
+                originalTextElement.appendChild(sentenceElement);
+            });
+
+            // Display coherent summary as a flowing text with paragraph
+            summaryElement.innerHTML = '';
+
+            // Create a coherent summary paragraph
+            const summaryParagraph = document.createElement('p');
+            summaryParagraph.textContent = summary;
+            summaryElement.appendChild(summaryParagraph);
+
+            // Add a divider
+            const divider = document.createElement('hr');
+            summaryElement.appendChild(divider);
+
+            // Display sentence-by-sentence breakdown with scores
+            const breakdownTitle = document.createElement('h3');
+            breakdownTitle.textContent = 'Sentence Breakdown';
+            breakdownTitle.style.marginTop = '20px';
+            summaryElement.appendChild(breakdownTitle);
+
+            summaryArray.forEach((sentence, index) => {
+                const sentenceElement = document.createElement('div');
+                sentenceElement.className = 'summary-sentence';
+                sentenceElement.textContent = sentence;
+
+                const scoreElement = document.createElement('span');
+                scoreElement.className = 'sentence-score';
+                scoreElement.textContent = `TF-IDF Score: ${scores[index].toFixed(4)} | Original Position: ${originalIndices[index] + 1}`;
+
+                sentenceElement.appendChild(scoreElement);
+                summaryElement.appendChild(sentenceElement);
+            });
+
+            // Display count information
+            countInfoElement.textContent = `Summary contains ${summaryArray.length} sentences out of ${allSentences.length} total sentences (${(summaryArray.length / allSentences.length * 100).toFixed(1)}% of original)`;
+        }
+
+        function displayHybridResults(extractiveSummary, originalText, summaryArray, scores, originalIndices, ledAbstractiveSummary) {
+            // Custom function to split text into sentences
+            function splitIntoSentences(text) {
+                // Split on period, question mark, or exclamation point followed by space or newline
+                const sentenceRegex = /[.!?]+[\s\n]+/;
+                const sentences = text.split(sentenceRegex);
+
+                // Filter out empty sentences and trim whitespace
+                return sentences
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+            }
+
+            // Display original text with sentences separated (for hybrid tab)
+            const allSentences = splitIntoSentences(originalText);
+
+            hybridOriginalTextElement.innerHTML = '';
+            allSentences.forEach((sentence, index) => {
+                const sentenceElement = document.createElement('div');
+                sentenceElement.className = 'sentence';
+
+                // Highlight sentences that are in the summary
+                const isInSummary = originalIndices.includes(index);
+                if (isInSummary) {
+                    sentenceElement.className = 'sentence highlight';
+                    sentenceElement.style.backgroundColor = '#ffeb3b';
+                }
+
+                sentenceElement.textContent = sentence;
+                hybridOriginalTextElement.appendChild(sentenceElement);
+            });
+
+            // Display LED abstractive summary
+            ledSummaryElement.innerHTML = '';
+            ledSummaryElement.textContent = ledAbstractiveSummary;
+
+            // Display extractive summary sentence breakdown
+            hybridSummaryElement.innerHTML = '';
+
+            summaryArray.forEach((sentence, index) => {
+                const sentenceElement = document.createElement('div');
+                sentenceElement.className = 'summary-sentence';
+                sentenceElement.textContent = sentence;
+
+                const scoreElement = document.createElement('span');
+                scoreElement.className = 'sentence-score';
+                scoreElement.textContent = `TF-IDF Score: ${scores[index].toFixed(4)} | Original Position: ${originalIndices[index] + 1}`;
+
+                sentenceElement.appendChild(scoreElement);
+                hybridSummaryElement.appendChild(sentenceElement);
+            });
+
+            // Display count information for hybrid summary
+            const ledWordCount = ledAbstractiveSummary.split(/\s+/).length;
+            const totalWordCount = originalText.split(/\s+/).length;
+            hybridCountInfoElement.textContent = `LED Summary: ${ledWordCount} words (${(ledWordCount / totalWordCount * 100).toFixed(1)}% of original) | TF-IDF Extraction: ${summaryArray.length} sentences out of ${allSentences.length} total sentences`;
+        }
+    </script>
+</body>
+</html>
