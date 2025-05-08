@@ -13,8 +13,8 @@ This repository contains the code, data, and documentation for our **Big Data An
 - **Project Proposal:** Feb 21  
 - **Check-in 1:** Mar 17-20  
 - **Check-in 2:** Apr 7-8  
-- **Final Presentation:** Apr 25  
-- **Final Report & Code Submission:** Apr 30  
+- **Final Presentation:** May 8  
+- **Final Report & Code Submission:** May 9  
 
 📁 **Repository Structure:**  
 - `data/` → Datasets & preprocessing scripts  
