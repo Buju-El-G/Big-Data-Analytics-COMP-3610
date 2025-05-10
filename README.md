@@ -4,9 +4,9 @@
 This repository contains the code, data, and documentation for our **Big Data Analytics** project in COMP 3610. Our goal is to tackle a real-world data problem by applying advanced analytics techniques, machine learning models, and visualization strategies. The project follows a structured workflow, from data preprocessing to insight generation, culminating in a final presentation and report.  
 
 🔍 **Project Scope:**  
-- **Problem Statement:** With over 1.7M scholarly papers available in the arXiv dataset spanning diverse STEM fields, researchers face an overwhelming volume of literature. The objective of our project is to build an automated text summarization system that efficiently extracts key insights from these articles, streamlining the literature review process. By reducing reading time and focusing attention on the most critical findings, our solution is designed to empower academics and professionals to keep pace with rapid scientific advancements.  
+- **Problem Statement:** With over 1.7M scholarly papers available in the arXiv dataset spanning diverse STEM fields, researchers face an overwhelming volume of literature. The objective of our project is to build an automated text summarization system that efficiently extracts key insights from these articles, streamlining the literature review process. By reducing reading time and focusing attention on the most critical findings, our solution is designed to empower academics and professionals to keep pace with rapid scientific advancements. 
 - **Dataset(s):** arXiv Dataset and metadata of 1.7M+ scholarly papers across STEM  
-- **Tech Stack:** Python, Jupyter, Pandas, Scikit-Learn, Matplotlib, etc.  
+- **Tech Stack:** Python, Jupyter, Flask, Pandas, Scikit-Learn, Matplotlib, etc.  
 - **Expected Deliverables:** Analysis, models, visualizations, and a research report  
 
 📅 **Milestones & Deadlines:**  
@@ -19,8 +19,8 @@ This repository contains the code, data, and documentation for our **Big Data An
 📁 **Repository Structure:**  
 - `data/` → Datasets & preprocessing scripts  
 - `notebooks/` → Jupyter Notebooks for EDA & modeling  
-- `src/` → Python scripts for data processing & ML  
-- `visuals/` → Charts, graphs, and visualizations  
+- `website/` → html, css and python files for web app   
+- `graphs/` → Charts, graphs, and visualizations  
 - `reports/` → Research report & documentation  
 
 🚀 **Collaboration & Contribution:**  
